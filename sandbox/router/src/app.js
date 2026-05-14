@@ -14,25 +14,42 @@ app.get('/api/status/ready', (req, res) => {
 })
 
 let proxies = {};
+let agentProxy = {};
+
+function getAgentProxy(sandboxId){
+    const target = `http://sandbox-service-${sandboxId}:3000`;
+
+    if(!agentProxy[sandboxId]){
+        agentProxy[sandboxId] = createProxyMiddleware({
+            target,
+            changeOrigin:true,
+            ws:true
+        })
+    }
+    return agentProxy[sandboxId];
+}
 
 function getProxy(sandboxId) {
-    const target = `http://sandbox-service-${sandboxId}`; 
+    const target = `http://sandbox-service-${sandboxId}`;
 
-    if (!proxies[ sandboxId ]) {
-        proxies[ sandboxId ] = createProxyMiddleware({
+    if (!proxies[sandboxId]) {
+        proxies[sandboxId] = createProxyMiddleware({
             target,
             changeOrigin: true,
             ws: true,
         })
     }
-    return proxies[ sandboxId ];
+    return proxies[sandboxId];
 }
 
-app.use((req,res,next)=>{
+app.use((req, res, next) => {
     const host = req.headers.host;
     const sandboxId = host.split('.')[0];
-    if (host.split('.')[ 1 ] === 'preview') {
+    if (host.split('.')[1] === 'preview') {
         return getProxy(sandboxId)(req, res, next);
+    }
+    else if(host.split('.')[1] === 'agent'){
+        return getAgentProxy(sandboxId)(req,res,next);
     }
 })
 
